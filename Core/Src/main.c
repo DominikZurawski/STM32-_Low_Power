@@ -7,7 +7,7 @@ void Error_handler(void);
 void TIMER6_Init(void);
 void UART2_Init(void);
 void SystemClock_Config(uint8_t clock_freq);
-void GPIO_AnalogConfig(void);
+void GPIO_AnalogConfig(void); //<- turn off analog pins when sleep mode is on
 
 TIM_HandleTypeDef htimer6;
 UART_HandleTypeDef huart2;
