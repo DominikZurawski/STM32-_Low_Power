@@ -116,7 +116,7 @@ void GPIO_AnalogConfig(void)
 	uint32_t gpio_pins = GPIO_PIN_0 | GPIO_PIN_1 |GPIO_PIN_4  | \
                        GPIO_PIN_5 | GPIO_PIN_6 |GPIO_PIN_7  | \
                        GPIO_PIN_8 | GPIO_PIN_9 |GPIO_PIN_10 | \
-                       GPIO_PIN_11| GPIO_PIN_12|GPIO_PIN_15;
+                       GPIO_PIN_11| GPIO_PIN_12|GPIO_PIN_1 5;
 
 	GpioA.Pin = gpio_pins;
 	GpioA.Mode = GPIO_MODE_ANALOG;
