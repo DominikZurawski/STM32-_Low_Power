@@ -1,39 +1,32 @@
 #include <string.h>
+#include <stdio.h>
 #include "stm32l4xx_hal.h"
 #include "main.h"
 
 void GPIO_Init(void);
 void Error_handler(void);
-void TIMER6_Init(void);
 void UART2_Init(void);
 void SystemClock_Config(uint8_t clock_freq);
 void GPIO_AnalogConfig(void); //<- turn off analog pins when sleep mode is on
 
-TIM_HandleTypeDef htimer6;
 UART_HandleTypeDef huart2;
 extern uint8_t some_data[];
 
 int main(void)
 {
-	HAL_Init();
-	//SystemClock_Config(SYS_CLOCK_FREQ_50_MHZ);
 	GPIO_Init();
+	HAL_Init();
+	//SystemClock_Config_HSE(SYS_CLOCK_FREQ_50_MHZ);
 	//HAL_SuspendTick();
 	UART2_Init();
-	TIMER6_Init();
 	GPIO_AnalogConfig();
 
-	HAL_PWR_EnableSleepOnExit();  // <- Here we are turn on sleep mode with SLEEPONEXIT register
-	//SCB->SCR |= ( 1 << 1);      // or
-
-	/* lets start with fresh Status register of Timer to avoid any spurious interrupts */
-    TIM6->SR = 0;
-
-	//Lets start the timer in interrupt mode
-	HAL_TIM_Base_Start_IT(&htimer6);
-
-	while(1);
-
+	while(1)
+	{
+		//going to sleep
+		 __WFI();
+		//MCU resumes here when it wakes up
+	}
 	return 0;
 }
 
@@ -111,72 +104,84 @@ void SystemClock_Config(uint8_t clock_freq )
 
 void GPIO_AnalogConfig(void)
 {
-	GPIO_InitTypeDef GpioA;
+	GPIO_InitTypeDef GpioA,GpioC;
 
-	uint32_t gpio_pins = GPIO_PIN_0 | GPIO_PIN_1 |GPIO_PIN_4  | \
-                       GPIO_PIN_5 | GPIO_PIN_6 |GPIO_PIN_7  | \
-                       GPIO_PIN_8 | GPIO_PIN_9 |GPIO_PIN_10 | \
-                       GPIO_PIN_11| GPIO_PIN_12|GPIO_PIN_1 5;
+	//skip GPIO 13 and 14 as they are SWDIO and SWD_CLK
+	uint32_t gpio_pins = GPIO_PIN_0  | GPIO_PIN_1  | GPIO_PIN_4  | \
+						           GPIO_PIN_5  | GPIO_PIN_6  | GPIO_PIN_7  | \
+						           GPIO_PIN_8  | GPIO_PIN_9  | GPIO_PIN_10 | \
+						           GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_15;
 
 	GpioA.Pin = gpio_pins;
 	GpioA.Mode = GPIO_MODE_ANALOG;
 	HAL_GPIO_Init(GPIOA,&GpioA);
+
+	gpio_pins = GPIO_PIN_0  | GPIO_PIN_1  | GPIO_PIN_2  | \
+			        GPIO_PIN_3  | GPIO_PIN_4  | GPIO_PIN_5  | \
+			        GPIO_PIN_6  | GPIO_PIN_7  | GPIO_PIN_8  | \
+			        GPIO_PIN_9  | GPIO_PIN_10 | GPIO_PIN_11 | \
+			        GPIO_PIN_12 | GPIO_PIN_14 | GPIO_PIN_15;
+
+	GpioC.Pin = gpio_pins;
+	GpioC.Mode = GPIO_MODE_ANALOG;
+	HAL_GPIO_Init(GPIOC,&GpioC);
 }
 
 void GPIO_Init(void)
 {
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_SLEEP_DISABLE();
 
-  GPIO_InitTypeDef ledgpio ;
-  ledgpio.Pin = GPIO_PIN_5;
-  ledgpio.Mode = GPIO_MODE_OUTPUT_PP;
-  ledgpio.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA,&ledgpio);
+	GPIO_InitTypeDef ledgpio , buttongpio;
+#if 0
+	ledgpio.Pin = GPIO_PIN_5;
+	ledgpio.Mode = GPIO_MODE_OUTPUT_PP;
+	ledgpio.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOA,&ledgpio);
 
-  ledgpio.Pin = GPIO_PIN_12;
-  ledgpio.Mode = GPIO_MODE_OUTPUT_PP;
-  ledgpio.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA,&ledgpio);
+	ledgpio.Pin = GPIO_PIN_12;
+	ledgpio.Mode = GPIO_MODE_OUTPUT_PP;
+	ledgpio.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOA,&ledgpio);
+
+#endif
+
+	buttongpio.Pin = GPIO_PIN_13;
+	buttongpio.Mode = GPIO_MODE_IT_FALLING;
+	buttongpio.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOC,&buttongpio);
+
+	HAL_NVIC_SetPriority(EXTI15_10_IRQn,15,0);
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_5,GPIO_PIN_RESET);
 }
 
 void UART2_Init(void)
 {
 	huart2.Instance = USART2;
-	huart2.Init.BaudRate = 115200;
+	huart2.Init.BaudRate =921600;
 	huart2.Init.WordLength = UART_WORDLENGTH_8B;
 	huart2.Init.StopBits = UART_STOPBITS_1;
 	huart2.Init.Parity = UART_PARITY_NONE;
 	huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart2.Init.Mode = UART_MODE_TX_RX;
+	huart2.Init.Mode = UART_MODE_TX;
+
 	if ( HAL_UART_Init(&huart2) != HAL_OK )
 	{
+		//There is a problem
 		Error_handler();
 	}
 }
 
-void TIMER6_Init(void)
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	htimer6.Instance = TIM6;
-	htimer6.Init.Prescaler = 4999;
-	htimer6.Init.Period = 100-1;
-	if( HAL_TIM_Base_Init(&htimer6) != HAL_OK )
+	if ( HAL_UART_Transmit(&huart2,(uint8_t*)some_data,(uint16_t)strlen((char*)some_data),HAL_MAX_DELAY) != HAL_OK)
 	{
 		Error_handler();
 	}
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  if ( HAL_UART_Transmit(&huart2,(uint8_t*)some_data,(uint16_t)strlen((char*)some_data),HAL_MAX_DELAY) != HAL_OK)
-  {
-    Error_handler();
-  }
-}
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA,GPIO_PIN_12,GPIO_PIN_RESET);
 }
 
 void Error_handler(void)

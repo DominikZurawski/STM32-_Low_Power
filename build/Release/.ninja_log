@@ -88,3 +88,7 @@
 2542	2961	7845056114889135	cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/8cca86c6a396333403cc078d9fecf950/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c.obj	29d0226d913f1157
 2468	3320	7845056118498809	cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir/8cca86c6a396333403cc078d9fecf950/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c.obj	ea7bbb89a772c18b
 3320	3471	7845056119825784	Low_Power.elf	2512afc6d5d66b22
+134	808	7845511363159110	CMakeFiles/Low_Power.dir/Core/Src/msp.c.obj	9a0cdd097b09ebeb
+130	827	7845511363209126	CMakeFiles/Low_Power.dir/Core/Src/it.c.obj	490dbc6ccddd6bec
+47	829	7845511363269116	CMakeFiles/Low_Power.dir/Core/Src/main.c.obj	1b6cf805f1273833
+829	1372	7845511368624029	Low_Power.elf	2512afc6d5d66b22
